@@ -1,0 +1,15 @@
+[package]
+name = "it_center"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4"
+uuid = { version = "1.4.0", features = ["v4", "serde"] }
+diesel = { version = "2.1.0", features = ["postgres", "r2d2", "uuid"] }
+dotenvy = "0.15"
+r2d2 = "0.8.10"
+serde = { version = "1.0.170", features = ["derive"] }
+actix-web-httpauth = "0.8.0"
+derive_more = "0.99.17"
+strum_macros = "0.25.1"
