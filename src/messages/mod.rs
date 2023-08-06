@@ -25,7 +25,7 @@ struct MessageDTO {
     status: String,
 }
 
-#[derive(strum_macros::Display, Debug)]
+#[derive(strum_macros::Display, Debug, Deserialize)]
 enum MessageStatus {
     New,
     _Received,
@@ -99,7 +99,7 @@ async fn get_all_messages(
 
 #[get("/filter/{status}")]
 async fn get_all_messages_with_status(
-    status: web::Path<String>,
+    status: web::Path<MessageStatus>,
     pool: web::Data<DbPool>,
     auth: BasicAuth,
 ) -> actix_web::Result<impl Responder> {
@@ -108,7 +108,11 @@ async fn get_all_messages_with_status(
         let mut conn = pool
             .get()
             .expect("Should be able to obtain db connection from pool");
-        message::select_all_messages_with_status(&mut conn, auth.user_id(), status.as_str())
+        message::select_all_messages_with_status(
+            &mut conn,
+            auth.user_id(),
+            status.to_string().as_str(),
+        )
     })
     .await?
     .map_err(error::ErrorInternalServerError)?
