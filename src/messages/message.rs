@@ -47,6 +47,27 @@ pub fn select_all_messages(
         .collect()
 }
 
+pub fn select_all_messages_with_status(
+    conn: &mut PgConnection,
+    username: &str,
+    status: &str,
+) -> diesel::QueryResult<Vec<(Message, Sender)>> {
+    let recipient = users::table
+        .filter(users::name.eq(username))
+        .select(Recipient::as_select())
+        .first(conn)?;
+
+    let found_messages: Vec<Message> = Message::belonging_to(&recipient)
+        .filter(messages::status.eq(status))
+        .select(Message::as_select())
+        .load(conn)?;
+
+    found_messages
+        .into_iter()
+        .map(|message| select_sender(message.sender_id, conn).map(|sender| (message, sender)))
+        .collect()
+}
+
 pub fn create_new_message(message: NewMessage, conn: &mut PgConnection) -> QueryResult<usize> {
     insert_into(messages::table).values(&message).execute(conn)
 }

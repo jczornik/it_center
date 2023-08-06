@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 pub fn generate_message_scope() -> actix_web::Scope {
     web::scope("messages")
         .service(get_all_messages)
+        .service(get_all_messages_with_status)
         .service(send_message)
 }
 
@@ -24,7 +25,7 @@ struct MessageDTO {
     status: String,
 }
 
-#[derive(strum_macros::Display, Debug)]
+#[derive(strum_macros::Display, Debug, Deserialize)]
 enum MessageStatus {
     New,
     _Received,
@@ -86,6 +87,32 @@ async fn get_all_messages(
             .get()
             .expect("Should be able to obtain db connection from pool");
         message::select_all_messages(&mut conn, auth.user_id())
+    })
+    .await?
+    .map_err(error::ErrorInternalServerError)?
+    .into_iter()
+    .map(|(message, sender)| MessageDTO::from(message, sender))
+    .collect();
+
+    Ok(HttpResponse::Ok().json(messages))
+}
+
+#[get("/filter/{status}")]
+async fn get_all_messages_with_status(
+    status: web::Path<MessageStatus>,
+    pool: web::Data<DbPool>,
+    auth: BasicAuth,
+) -> actix_web::Result<impl Responder> {
+    let status = status.into_inner();
+    let messages: Vec<MessageDTO> = web::block(move || {
+        let mut conn = pool
+            .get()
+            .expect("Should be able to obtain db connection from pool");
+        message::select_all_messages_with_status(
+            &mut conn,
+            auth.user_id(),
+            status.to_string().as_str(),
+        )
     })
     .await?
     .map_err(error::ErrorInternalServerError)?
