@@ -19,6 +19,7 @@ pub fn generate_message_scope() -> actix_web::Scope {
 
 #[derive(Serialize, Debug)]
 struct MessageDTO {
+    id: String,
     sender: String,
     title: String,
     message: String,
@@ -36,6 +37,7 @@ enum MessageStatus {
 impl MessageDTO {
     fn from(message: message::Message, sender: sender::Sender) -> Self {
         MessageDTO {
+            id: message.id.to_string(),
             sender: sender.name,
             title: message.title,
             message: message.body,
