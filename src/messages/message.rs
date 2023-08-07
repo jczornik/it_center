@@ -1,7 +1,9 @@
+use std::str::FromStr;
+
 use super::recipient::Recipient;
 use super::sender::{select_sender, Sender};
 use crate::schema::{messages, users};
-use diesel::{insert_into, prelude::*};
+use diesel::{insert_into, prelude::*, update};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -66,6 +68,30 @@ pub fn select_all_messages_with_status(
         .into_iter()
         .map(|message| select_sender(message.sender_id, conn).map(|sender| (message, sender)))
         .collect()
+}
+
+pub fn change_message_status(
+    conn: &mut PgConnection,
+    username: &str,
+    message_uuid: &str,
+    status: &str,
+) -> diesel::QueryResult<()> {
+    let message_uuid = Uuid::from_str(message_uuid).unwrap(); // TODO: Fix unwrap
+    let user = users::table
+        .filter(users::name.eq(username))
+        .select(Recipient::as_select())
+        .load(conn)?;
+
+    let _: Message = Message::belonging_to(&user)
+        .filter(messages::id.eq(message_uuid))
+        .first(conn)?;
+
+    update(messages::table)
+        .filter(messages::id.eq(message_uuid))
+        .set(messages::status.eq(status))
+        .execute(conn)?;
+
+    Ok(())
 }
 
 pub fn create_new_message(message: NewMessage, conn: &mut PgConnection) -> QueryResult<usize> {

@@ -29,7 +29,7 @@ struct MessageDTO {
 #[derive(strum_macros::Display, Debug, Deserialize)]
 enum MessageStatus {
     New,
-    _Received,
+    Received,
     _Read,
     _Deleted,
 }
@@ -59,6 +59,8 @@ enum ProcessingMessageError {
     RecipientNotFound,
     #[display(fmt = "Error while saving message")]
     CannotSaveMessage,
+    #[display(fmt = "Error while modifying message status")]
+    CannotModifyMesageStatus,
     #[display(fmt = "Internal server error")]
     InternalServerError,
 }
@@ -74,6 +76,7 @@ impl ResponseError for ProcessingMessageError {
         match *self {
             Self::RecipientNotFound => StatusCode::BAD_REQUEST,
             Self::CannotSaveMessage => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::CannotModifyMesageStatus => StatusCode::BAD_REQUEST,
             Self::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -123,6 +126,27 @@ async fn get_all_messages_with_status(
     .collect();
 
     Ok(HttpResponse::Ok().json(messages))
+}
+
+#[post("/ack/received/{message_id}")]
+async fn ack_message_receive(
+    message_id: web::Path<String>,
+    pool: web::Data<DbPool>,
+    auth: BasicAuth,
+) -> actix_web::Result<impl Responder> {
+    let mut conn = pool
+        .get()
+        .expect("Should be able to obtain db connection from pool");
+
+    message::change_message_status(
+        &mut conn,
+        auth.user_id(),
+        message_id.as_str(),
+        MessageStatus::Received.to_string().as_str(),
+    )
+    .map_err(|_| ProcessingMessageError::CannotModifyMesageStatus)?;
+
+    Ok(HttpResponse::Ok())
 }
 
 #[post("/new")]
