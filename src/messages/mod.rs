@@ -15,7 +15,7 @@ pub fn generate_message_scope() -> actix_web::Scope {
         .service(get_all_messages)
         .service(get_all_messages_with_status)
         .service(send_message)
-        .service(ack_message_receive)
+        .service(ack_message_reception)
 }
 
 #[derive(Serialize, Debug)]
@@ -129,8 +129,8 @@ async fn get_all_messages_with_status(
     Ok(HttpResponse::Ok().json(messages))
 }
 
-#[post("/ack/received/{message_id}")]
-async fn ack_message_receive(
+#[post("/ack/reception/{message_id}")]
+async fn ack_message_reception(
     message_id: web::Path<String>,
     pool: web::Data<DbPool>,
     auth: BasicAuth,
