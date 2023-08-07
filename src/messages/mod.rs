@@ -15,6 +15,7 @@ pub fn generate_message_scope() -> actix_web::Scope {
         .service(get_all_messages)
         .service(get_all_messages_with_status)
         .service(send_message)
+        .service(ack_message_receive)
 }
 
 #[derive(Serialize, Debug)]
